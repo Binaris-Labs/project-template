@@ -3,7 +3,8 @@ package logger
 import (
 	"log"
 
-	"backend-template/internal/config"
+	"backend/internal/config"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )

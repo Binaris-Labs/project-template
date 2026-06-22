@@ -5,12 +5,12 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.uber.org/zap"
 
-	"backend-template/internal/config"
-	"backend-template/internal/modules/health"
-	"backend-template/pkg/database"
-	"backend-template/pkg/logger"
-	"backend-template/pkg/respond"
-	"backend-template/pkg/validation"
+	"backend/internal/config"
+	"backend/internal/modules/health"
+	"backend/pkg/database"
+	"backend/pkg/logger"
+	"backend/pkg/respond"
+	"backend/pkg/validation"
 )
 
 type App struct {

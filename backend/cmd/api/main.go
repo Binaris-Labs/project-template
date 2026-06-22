@@ -1,8 +1,8 @@
 package main
 
 import (
-	"backend-template/internal/app"
-	"backend-template/pkg/logger"
+	"backend/internal/app"
+	"backend/pkg/logger"
 )
 
 func main() {

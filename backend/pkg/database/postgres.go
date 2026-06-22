@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"backend-template/internal/config"
-	"backend-template/pkg/logger"
+	"backend/internal/config"
+	"backend/pkg/logger"
+
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 	"go.uber.org/zap"

@@ -5,7 +5,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	"backend-template/pkg/respond"
+	"backend/pkg/respond"
 )
 
 func RequireRole(allowedRoles ...string) echo.MiddlewareFunc {

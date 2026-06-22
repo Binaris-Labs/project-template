@@ -1,10 +1,11 @@
 package health
 
 import (
+	"backend/pkg/logger"
+	"backend/pkg/respond"
+
 	"github.com/labstack/echo/v4"
-	"backend-template/pkg/respond"
 	"go.uber.org/zap"
-	"backend-template/pkg/logger"
 )
 
 type Handler struct {

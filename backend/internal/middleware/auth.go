@@ -5,10 +5,11 @@ import (
 	"errors"
 	"strings"
 
-	"backend-template/internal/config"
-	"backend-template/pkg/database"
-	"backend-template/pkg/logger"
-	"backend-template/pkg/respond"
+	"backend/internal/config"
+	"backend/pkg/database"
+	"backend/pkg/logger"
+	"backend/pkg/respond"
+
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/labstack/echo/v4"
 	"go.uber.org/zap"
