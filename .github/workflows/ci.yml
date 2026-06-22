@@ -43,10 +43,22 @@ jobs:
           echo "PostgreSQL is ready!"
 
       - name: Run Unit Tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: template_db
         run: make test-unit
         working-directory: ./backend
 
       - name: Run Integration Tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: template_db
         run: |
           # Start the backend server in the background
           make run &
@@ -54,8 +66,19 @@ jobs:
 
           # Wait for the server to be ready
           echo "Waiting for server to start..."
-          until curl -s http://localhost:8080/ping > /dev/null; do
+          TIMEOUT=30
+          while ! curl -s http://localhost:8080/ping > /dev/null; do
+            if ! kill -0 $SERVER_PID 2>/dev/null; then
+              echo "Server crashed! Exiting..."
+              exit 1
+            fi
             sleep 1
+            TIMEOUT=$((TIMEOUT-1))
+            if [ $TIMEOUT -eq 0 ]; then
+              echo "Timeout waiting for server to start! Exiting..."
+              kill -9 $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
           done
           echo "Server is up!"
 
