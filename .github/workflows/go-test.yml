@@ -84,7 +84,9 @@ jobs:
       working-directory: ./backend
       env:
         DB_URL: "postgres://postgres:password123@localhost:5432/church_db_test?sslmode=disable"
-      run: make migrate-up DB_URL=$DB_URL
+      run: |
+        mkdir -p db/migrations
+        make migrate-up DB_URL=$DB_URL
 
     - name: Start Golang Server
       working-directory: ./backend
