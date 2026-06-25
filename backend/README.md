@@ -1,101 +1,196 @@
-# Backend Template (Golang)
+[![GitHub Workflow Status (branch)](https://img.shields.io/github/actions/workflow/status/golang-migrate/migrate/ci.yaml?branch=master)](https://github.com/golang-migrate/migrate/actions/workflows/ci.yaml?query=branch%3Amaster)
+[![GoDoc](https://pkg.go.dev/badge/github.com/golang-migrate/migrate)](https://pkg.go.dev/github.com/golang-migrate/migrate/v4)
+[![Coverage Status](https://img.shields.io/coveralls/github/golang-migrate/migrate/master.svg)](https://coveralls.io/github/golang-migrate/migrate?branch=master)
+[![packagecloud.io](https://img.shields.io/badge/deb-packagecloud.io-844fec.svg)](https://packagecloud.io/golang-migrate/migrate?filter=debs)
+[![Docker Pulls](https://img.shields.io/docker/pulls/migrate/migrate.svg)](https://hub.docker.com/r/migrate/migrate/)
+![Supported Go Versions](https://img.shields.io/badge/Go-1.22%2C%201.23-lightgrey.svg)
+[![GitHub Release](https://img.shields.io/github/release/golang-migrate/migrate.svg)](https://github.com/golang-migrate/migrate/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/golang-migrate/migrate/v4)](https://goreportcard.com/report/github.com/golang-migrate/migrate/v4)
 
-Welcome to the Backend Template! This project is designed as a starting point for your new applications. It is built using **Golang** and the **Echo Framework**.
+# migrate
 
-This documentation is written specifically to help **junior developers** understand how the project is structured, how the flow of data works, and how to start the application easily.
+__Database migrations written in Go. Use as [CLI](#cli-usage) or import as [library](#use-in-your-go-project).__
 
----
+* Migrate reads migrations from [sources](#migration-sources)
+   and applies them in correct order to a [database](#databases).
+* Drivers are "dumb", migrate glues everything together and makes sure the logic is bulletproof.
+   (Keeps the drivers lightweight, too.)
+* Database drivers don't assume things or try to correct user input. When in doubt, fail.
 
-## 1. How to run it
+Forked from [mattes/migrate](https://github.com/mattes/migrate)
 
-Follow these simple steps to run the backend application on your local machine:
+## Databases
 
-### Step 1: Set up your Environment Variables
-1. Find the `.env.example` file in the root directory.
-2. Copy it and rename the copy to `.env`.
-   ```bash
-   cp .env.example .env
-   ```
-3. Open `.env` and fill in your actual database credentials.
+Database drivers run migrations. [Add a new database?](database/driver.go)
 
-### Step 2: Install Dependencies
-Download all the required third-party libraries (like Echo, Zap Logger, Postgres driver).
+* [PostgreSQL](database/postgres)
+* [PGX v4](database/pgx)
+* [PGX v5](database/pgx/v5)
+* [Redshift](database/redshift)
+* [Ql](database/ql)
+* [Cassandra / ScyllaDB](database/cassandra)
+* [SQLite](database/sqlite)
+* [SQLite3](database/sqlite3) ([todo #165](https://github.com/mattes/migrate/issues/165))
+* [SQLCipher](database/sqlcipher)
+* [MySQL / MariaDB](database/mysql)
+* [Neo4j](database/neo4j)
+* [MongoDB](database/mongodb)
+* [CrateDB](database/crate) ([todo #170](https://github.com/mattes/migrate/issues/170))
+* [Shell](database/shell) ([todo #171](https://github.com/mattes/migrate/issues/171))
+* [Google Cloud Spanner](database/spanner)
+* [CockroachDB](database/cockroachdb)
+* [YugabyteDB](database/yugabytedb)
+* [ClickHouse](database/clickhouse)
+* [Firebird](database/firebird)
+* [MS SQL Server](database/sqlserver)
+* [rqlite](database/rqlite)
+
+### Database URLs
+
+Database connection strings are specified via URLs. The URL format is driver dependent but generally has the form: `dbdriver://username:password@host:port/dbname?param1=true&param2=false`
+
+Any [reserved URL characters](https://en.wikipedia.org/wiki/Percent-encoding#Percent-encoding_reserved_characters) need to be escaped. Note, the `%` character also [needs to be escaped](https://en.wikipedia.org/wiki/Percent-encoding#Percent-encoding_the_percent_character)
+
+Explicitly, the following characters need to be escaped:
+`!`, `#`, `$`, `%`, `&`, `'`, `(`, `)`, `*`, `+`, `,`, `/`, `:`, `;`, `=`, `?`, `@`, `[`, `]`
+
+It's easiest to always run the URL parts of your DB connection URL (e.g. username, password, etc) through an URL encoder. See the example Python snippets below:
+
 ```bash
-go mod tidy
+$ python3 -c 'import urllib.parse; print(urllib.parse.quote(input("String to encode: "), ""))'
+String to encode: FAKEpassword!#$%&'()*+,/:;=?@[]
+FAKEpassword%21%23%24%25%26%27%28%29%2A%2B%2C%2F%3A%3B%3D%3F%40%5B%5D
+$ python2 -c 'import urllib; print urllib.quote(raw_input("String to encode: "), "")'
+String to encode: FAKEpassword!#$%&'()*+,/:;=?@[]
+FAKEpassword%21%23%24%25%26%27%28%29%2A%2B%2C%2F%3A%3B%3D%3F%40%5B%5D
+$
 ```
 
-### Step 3: Run Database Migrations
-Since we are using PostgreSQL, make sure your database is running. If you have any `.sql` files in the `db/migrations` folder, run them in your database tool or via the Makefile `make migrate-up`.
+## Migration Sources
 
-### Step 4: Start the Server
-Now you can start the application!
+Source drivers read migrations from local or remote sources. [Add a new source?](source/driver.go)
+
+* [Filesystem](source/file) - read from filesystem
+* [io/fs](source/iofs) - read from a Go [io/fs](https://pkg.go.dev/io/fs#FS)
+* [Go-Bindata](source/go_bindata) - read from embedded binary data ([jteeuwen/go-bindata](https://github.com/jteeuwen/go-bindata))
+* [pkger](source/pkger) - read from embedded binary data ([markbates/pkger](https://github.com/markbates/pkger))
+* [GitHub](source/github) - read from remote GitHub repositories
+* [GitHub Enterprise](source/github_ee) - read from remote GitHub Enterprise repositories
+* [Bitbucket](source/bitbucket) - read from remote Bitbucket repositories
+* [Gitlab](source/gitlab) - read from remote Gitlab repositories
+* [AWS S3](source/aws_s3) - read from Amazon Web Services S3
+* [Google Cloud Storage](source/google_cloud_storage) - read from Google Cloud Platform Storage
+
+## CLI usage
+
+* Simple wrapper around this library.
+* Handles ctrl+c (SIGINT) gracefully.
+* No config search paths, no config files, no magic ENV var injections.
+
+__[CLI Documentation](cmd/migrate)__
+
+### Basic usage
+
 ```bash
-go run cmd/api/main.go
+$ migrate -source file://path/to/migrations -database postgres://localhost:5432/database up 2
 ```
-*Tip: If you have `make` installed, you can also just type `make run` in your terminal!*
 
-If everything is successful, you will see a log message saying: `🚀 Starting backend Server on port :8080`.
+### Docker usage
+
+```bash
+$ docker run -v {{ migration dir }}:/migrations --network host migrate/migrate
+    -path=/migrations/ -database postgres://localhost:5432/database up 2
+```
+
+## Use in your Go project
+
+* API is stable and frozen for this release (v3 & v4).
+* Uses [Go modules](https://golang.org/cmd/go/#hdr-Modules__module_versions__and_more) to manage dependencies.
+* To help prevent database corruptions, it supports graceful stops via `GracefulStop chan bool`.
+* Bring your own logger.
+* Uses `io.Reader` streams internally for low memory overhead.
+* Thread-safe and no goroutine leaks.
+
+__[Go Documentation](https://pkg.go.dev/github.com/golang-migrate/migrate/v4)__
+
+```go
+import (
+    "github.com/golang-migrate/migrate/v4"
+    _ "github.com/golang-migrate/migrate/v4/database/postgres"
+    _ "github.com/golang-migrate/migrate/v4/source/github"
+)
+
+func main() {
+    m, err := migrate.New(
+        "github://mattes:personal-access-token@mattes/migrate_test",
+        "postgres://localhost:5432/database?sslmode=enable")
+    m.Steps(2)
+}
+```
+
+Want to use an existing database client?
+
+```go
+import (
+    "database/sql"
+    _ "github.com/lib/pq"
+    "github.com/golang-migrate/migrate/v4"
+    "github.com/golang-migrate/migrate/v4/database/postgres"
+    _ "github.com/golang-migrate/migrate/v4/source/file"
+)
+
+func main() {
+    db, err := sql.Open("postgres", "postgres://localhost:5432/database?sslmode=enable")
+    driver, err := postgres.WithInstance(db, &postgres.Config{})
+    m, err := migrate.NewWithDatabaseInstance(
+        "file:///migrations",
+        "postgres", driver)
+    m.Up() // or m.Steps(2) if you want to explicitly set the number of migrations to run
+}
+```
+
+## Getting started
+
+Go to [getting started](GETTING_STARTED.md)
+
+## Tutorials
+
+* [CockroachDB](database/cockroachdb/TUTORIAL.md)
+* [PostgreSQL](database/postgres/TUTORIAL.md)
+
+(more tutorials to come)
+
+## Migration files
+
+Each migration has an up and down migration. [Why?](FAQ.md#why-two-separate-files-up-and-down-for-a-migration)
+
+```bash
+1481574547_create_users_table.up.sql
+1481574547_create_users_table.down.sql
+```
+
+[Best practices: How to write migrations.](MIGRATIONS.md)
+
+## Coming from another db migration tool?
+
+Check out [migradaptor](https://github.com/musinit/migradaptor/).
+*Note: migradaptor is not affiliated or supported by this project*
+
+## Versions
+
+Version | Supported? | Import | Notes
+--------|------------|--------|------
+**master** | :white_check_mark: | `import "github.com/golang-migrate/migrate/v4"` | New features and bug fixes arrive here first |
+**v4** | :white_check_mark: | `import "github.com/golang-migrate/migrate/v4"` | Used for stable releases |
+**v3** | :x: | `import "github.com/golang-migrate/migrate"` (with package manager) or `import "gopkg.in/golang-migrate/migrate.v3"` (not recommended) | **DO NOT USE** - No longer supported |
+
+## Development and Contributing
+
+Yes, please! [`Makefile`](Makefile) is your friend,
+read the [development guide](CONTRIBUTING.md).
+
+Also have a look at the [FAQ](FAQ.md).
 
 ---
 
-## 2. Testing Explained (Caveman Style)
-
-Testing is how we prove our code works *before* it breaks in production. We have two main types of tests here.
-
-### A. Unit Tests (`make test-unit`)
-- **What it is:** Testing a tiny piece of code completely in isolation (like testing a single function).
-- **The Caveman Explanation:** "Does the chef cook the egg correctly when I give him an egg?"
-- **Rules:** NO database. NO real internet. We use "mocks" (fake data) to pretend the database exists. Because there is no database, these run **lightning fast**.
-- **Where they live:** Next to the file they are testing (e.g., `internal/modules/health/service_test.go`).
-
-### B. Integration Tests (`make test-integration`)
-- **What it is:** Testing the entire flow from start to finish, just like a real user.
-- **The Caveman Explanation:** "I walk in the door, talk to the waiter, the waiter tells the chef, the chef gets food from the pantry, and brings it back. Was it delicious?"
-- **Rules:** YES database. YES real network requests (HTTP). We spin up the whole server and make real `curl`/`GET`/`POST` requests. Because they touch a real database, they are **slower**.
-- **Where they live:** Inside the `tests/` folder at the root.
-
----
-
-## 3. GitHub CI/CD Pipeline Explained
-
-**CI/CD** stands for *Continuous Integration / Continuous Deployment*.
-
-### How it works (The Flow):
-1. You finish writing code and do a `git push` or open a Pull Request (PR).
-2. GitHub detects the push and instantly starts a hidden server (a "Runner") in the cloud.
-3. The Runner looks at `.github/workflows/ci.yml` and follows the instructions:
-   - "Install Go"
-   - "Start a PostgreSQL database inside a Docker container"
-   - "Run `make test-unit`"
-   - "Run `make test-integration`"
-4. If **any test fails**, GitHub marks your code with a big red ❌. You cannot merge it!
-5. If **all tests pass**, GitHub gives you a green ✅. Your code is safe to merge.
-
-**Why is this amazing?** You never have to guess if you broke something. The robot (GitHub Actions) tests your entire app automatically every single time you push code.
-
----
-
-## 4. How to read the flow (The Request Journey)
-
-> **💡 Want a visual step-by-step diagram?**  
-> Check out the [FLOW.md](./FLOW.md) file for a complete visual breakdown, including the CI/CD flow!
-
-When a user sends a request to our API, it travels through several files. Think of it like a customer ordering food at a restaurant:
-
-1. **`cmd/api/main.go` (The Front Door)**
-   - Where the application starts. Calls the `app` package.
-2. **`internal/app/app.go` (The Manager)**
-   - Sets up the server, database, logging, and registers URLs.
-3. **`Handler` (The Waiter)** 
-   - Receives the HTTP request. Checks input. Passes to Service.
-4. **`Service` (The Chef)** 
-   - The **Business Logic**. Hashes passwords, checks rules. Asks Repo for data.
-5. **`Repository` (The Pantry/Database)** 
-   - The ONLY place that talks directly to PostgreSQL. Runs SQL queries.
-
-**The Flow Summary:**
-`main.go` ➔ `app.go` ➔ **Handler** ➔ **Service** ➔ **Repository** ➔ **Database**
-
----
-
-*Happy Coding! Take it one step at a time, read the errors in the terminal, and you'll do great.* 🚀
+Looking for alternatives? [https://awesome-go.com/#database](https://awesome-go.com/#database).

@@ -86,7 +86,11 @@ jobs:
         DB_URL: "postgres://postgres:password123@localhost:5432/church_db_test?sslmode=disable"
       run: |
         mkdir -p db/migrations
-        make migrate-up DB_URL=$DB_URL
+        if ls db/migrations/*.sql 1> /dev/null 2>&1; then
+          make migrate-up DB_URL=$DB_URL
+        else
+          echo "No migrations found, skipping migration step."
+        fi
 
     - name: Start Golang Server
       working-directory: ./backend
