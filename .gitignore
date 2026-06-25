@@ -1,0 +1,30 @@
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Go binaries & outputs
+# =========================
+/backend/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# =========================
+# Logs
+# =========================
+*.log
+server.log
+
+# =========================
+# OS-specific files
+# =========================
+.DS_Store
+Thumbs.db

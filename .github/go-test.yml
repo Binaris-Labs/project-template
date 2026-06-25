@@ -1,0 +1,124 @@
+name: Go Test Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24' # Make sure this matches your project's go version
+
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: go mod download
+
+    - name: Run Unit Tests
+      working-directory: ./backend
+      run: make test-unit
+
+  integration-tests:
+    name: Run Integration Tests
+    runs-on: ubuntu-latest
+    
+    # We need a PostgreSQL database to run our integration tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password123
+          POSTGRES_DB: church_db_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Install golang-migrate
+      run: |
+        curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+        sudo mv migrate /usr/local/bin/migrate
+
+    - name: Wait for PostgreSQL
+      run: |
+        timeout=30
+        until pg_isready -h localhost -p 5432 -U postgres; do
+          if [ $timeout -le 0 ]; then
+            echo "Timeout waiting for PostgreSQL"
+            exit 1
+          fi
+          echo "Waiting for postgres..."
+          sleep 2
+          timeout=$((timeout - 2))
+        done
+
+    - name: Run Database Migrations
+      working-directory: ./backend
+      env:
+        DB_URL: "postgres://postgres:password123@localhost:5432/church_db_test?sslmode=disable"
+      run: make migrate-up DB_URL=$DB_URL
+
+    - name: Start Golang Server
+      working-directory: ./backend
+      env:
+        DB_HOST: "localhost"
+        DB_PORT: "5432"
+        DB_USER: "postgres"
+        DB_PASSWORD: "password123"
+        DB_NAME: "church_db_test"
+      run: |
+        make run > server.log 2>&1 &
+        SERVER_PID=$!
+        echo "Waiting for Go server to start..."
+        timeout=30
+        until curl -s http://localhost:8080 > /dev/null 2>&1; do
+          if ! kill -0 $SERVER_PID 2>/dev/null; then
+            echo "Go server failed to start or crashed. Logs:"
+            cat server.log
+            exit 1
+          fi
+          if [ $timeout -le 0 ]; then
+            echo "Timeout waiting for Go server to start. Logs:"
+            cat server.log
+            exit 1
+          fi
+          echo "Server not ready yet..."
+          sleep 2
+          timeout=$((timeout - 2))
+        done
+        echo "Go server is up!"
+
+    - name: Run Integration Tests
+      working-directory: ./backend
+      env:
+        TEST_BASE_URL: "http://localhost:8080"
+        TEST_DB_URL: "postgres://postgres:password123@localhost:5432/church_db_test?sslmode=disable"
+      run: make test-integration
